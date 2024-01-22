@@ -1,35 +1,52 @@
 from pytube import YouTube
+from tkinter import filedialog, Tk, simpledialog
+from colorama import Fore, Style
 
-def download_video(video_url, save_path="."):
+def get_video_streams(video):
+    streams = video.streams.filter(progressive=True).order_by('resolution').desc()
+    return streams
+
+def display_available_streams(streams):
+    print("\nAvailable Video Resolutions:")
+    for i, stream in enumerate(streams, start=1):
+        print(f"{i}. {stream.resolution} - {stream.mime_type}")
+
+def get_user_choice():
+    # Prompt user to select a stream
+    choice = simpledialog.askinteger("Video Quality", "Enter the number corresponding to the desired video quality:")
+    return choice
+
+def download_video(video_url):
     try:
         # Create a YouTube object
         youtube = YouTube(video_url)
 
-        # Get the highest resolution stream
-        video_stream = youtube.streams.get_highest_resolution()
+        # Get available video streams
+        video_streams = get_video_streams(youtube)
 
-        # Register the callback function to track download progress
-        video_stream.register_on_progress_callback(on_progress)
+        # Display available video streams
+        display_available_streams(video_streams)
+
+        # Prompt user to select a stream
+        choice = get_user_choice()
+        selected_stream = video_streams[choice - 1]
+
+        # Choose the destination folder interactively
+        Tk().withdraw()  # Close the root window
+        destination_folder = filedialog.askdirectory(title="Select Destination Folder")
 
         # Download the video
-        video_stream.download(save_path)
+        print(f"\nDownloading in {selected_stream.resolution} quality to {destination_folder}...")
+        selected_stream.download(destination_folder)
 
-        print("\nDownload completed successfully!")
+        print(Fore.LIME + Style.BRIGHT + "\nDOWNLOAD COMPLETED SUCCESSFULLY!" + Style.RESET_ALL)
 
     except Exception as e:
-        print(f"An error occurred: {e}")
-
-def on_progress(stream, chunk, bytes_remaining):
-    # Calculate the percentage of downloaded bytes
-    percent = round((1 - bytes_remaining / stream.filesize) * 100, 2)
-    print(f"\rDownloading: {percent}% complete", end="")
+        print(Fore.RED + Style.BRIGHT + f"\nAN ERROR OCCURRED: {e}" + Style.RESET_ALL)
 
 if __name__ == "__main__":
     # Get the YouTube video URL from the user
     video_url = input("Enter the YouTube video URL: ")
 
-    # Specify the folder where the video will be saved (default is the current working directory)
-    save_path = input("Enter the path to save the video (press Enter to save in the current directory): ")
-
     # Download the video
-    download_video(video_url, save_path)
+    download_video(video_url)
